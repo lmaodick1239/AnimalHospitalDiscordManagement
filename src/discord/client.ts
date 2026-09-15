@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits } from "discord.js";
+import { Client, Events, GatewayIntentBits } from "discord.js";
 import type { Config } from "../config.js";
 import type Database from "better-sqlite3";
 import type { Clock } from "../clock.js";
@@ -8,6 +8,7 @@ import { handleSetup, handleTimezoneAutocomplete } from "./handlers/setup.js";
 import { handleSession, handleCloseAutocomplete } from "./handlers/session.js";
 import { handleReportSlash, handleButton, type ReportDeps } from "./handlers/report.js";
 import { createDiscordPort } from "./postOrTick.js";
+import { handleGuildDelete } from "./handlers/guildDelete.js";
 
 export function createBot(opts: { config: Config; db: Database.Database; clock: Clock; events: EventSink; modes: ModeStore }): Client {
   const client = new Client({ intents: [GatewayIntentBits.Guilds] });
@@ -26,6 +27,6 @@ export function createBot(opts: { config: Config; db: Database.Database; clock: 
       if (interaction.isButton()) return handleButton(interaction, deps);
     } catch (error) { console.error(error); }
   });
-  client.on("guildDelete", () => {});
+  client.on(Events.GuildDelete, (guild) => { void handleGuildDelete({ db: opts.db, events: opts.events, clock: opts.clock, guildId: guild.id }).catch((error) => console.error(error)); });
   return client;
 }
