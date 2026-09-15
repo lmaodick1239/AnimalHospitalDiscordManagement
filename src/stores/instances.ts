@@ -98,6 +98,10 @@ export function closeInstance(db: Database.Database, id: string, atIso: string):
   db.prepare("UPDATE instances SET closed_at = ? WHERE id = ? AND closed_at IS NULL").run(atIso, id);
 }
 
+export function updateInstanceShiftNumber(db: Database.Database, id: string, shiftNumber: number): void {
+  db.prepare("UPDATE instances SET shift_number = ? WHERE id = ?").run(shiftNumber, id);
+}
+
 export function listOpenIdleSince(db: Database.Database, cutoffIso: string): Instance[] {
   return mapMany(db.prepare("SELECT * FROM instances WHERE closed_at IS NULL AND last_activity_at < ? ORDER BY last_activity_at ASC").all(cutoffIso) as InstanceRow[]);
 }

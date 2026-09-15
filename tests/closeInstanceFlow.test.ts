@@ -32,3 +32,46 @@ test("finalizeClose closes in SQLite and emits once despite Discord failure", as
   assert.deepEqual(events, [{ type: "closed", instanceId: "i1", closedAt: "2026-01-01T01:00:00.000Z" }]);
   db.close();
 });
+
+test("finalizeClose renames thread to (closed) and posts game ended message", async () => {
+  const db = openDb(":memory:");
+  const inst = instance(db);
+  const events: LogEvent[] = [];
+  const sentMessages: any[] = [];
+  let renamedTo: string | null = null;
+  let archived = false;
+
+  const mockChannel = {
+    messages: {
+      fetch: async () => ({
+        edit: async () => {},
+      }),
+    },
+    send: async (payload: any) => {
+      sentMessages.push(payload);
+      return { id: "msg-ended" };
+    },
+    setName: async (name: string) => {
+      renamedTo = name;
+    },
+    setArchived: async (val: boolean) => {
+      archived = val;
+    },
+    name: "14:30-16092026",
+  };
+
+  const client = {
+    channels: {
+      fetch: async () => mockChannel,
+    },
+  } as never;
+
+  const clock = { now: () => new Date("2026-01-01T01:00:00.000Z") };
+
+  await finalizeClose({ db, client, events: sink(events), instance: { ...inst, panelMessageId: "p1" }, clock });
+
+  assert.deepEqual(sentMessages, [{ content: "Game ended. Shift Closed." }]);
+  assert.equal(renamedTo, "14:30-16092026 (closed)");
+  assert.equal(archived, true);
+  db.close();
+});

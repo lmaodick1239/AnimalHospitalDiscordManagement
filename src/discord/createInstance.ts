@@ -40,22 +40,21 @@ export async function createInstanceFlow(opts: { db: Database.Database; client: 
   if (opts.mode === "admin" && !opts.admin!.thread && findOpenUnthreaded(opts.db, parentId)) throw new UnthreadedConflictError();
   if (countOpenInstances(opts.db, opts.guildId) >= 20) throw new CapError();
   if (!allowCreate(opts.actorId, opts.clock.now().getTime())) throw new ThrottleError();
-  const counter = nextCounter(settings.shiftCounter, opts.mode === "admin" ? opts.admin!.shift : undefined);
-  setShiftCounter(opts.db, opts.guildId, counter.counter);
+  const shiftNumber = opts.mode === "admin" && opts.admin?.shift !== undefined ? opts.admin.shift : 1;
   let destinationId = parentId; let threadName: string | null = null;
   if (adminThread) {
     threadName = resolveThreadName({ now: opts.clock.now(), timeZone: settings.timezone, adminName: opts.mode === "admin" ? opts.admin!.threadName : undefined });
-    const thread = await parent.threads.create({ name: threadName, autoArchiveDuration: 1440, reason: `shift ${counter.shiftNumber}` });
+    const thread = await parent.threads.create({ name: threadName, autoArchiveDuration: 1440, reason: `shift ${shiftNumber}` });
     destinationId = thread.id;
   }
   const id = ulid(); const now = opts.clock.now().toISOString();
-  const instance = insertInstance(opts.db, { id, guildId: opts.guildId, shiftNumber: counter.shiftNumber, parentChannelId: parentId, destinationChannelId: destinationId, isThread: adminThread, threadName, createdBy: opts.actorId, createdByDisplayName: opts.actorDisplayName, createdAt: now, lastActivityAt: now });
+  const instance = insertInstance(opts.db, { id, guildId: opts.guildId, shiftNumber, parentChannelId: parentId, destinationChannelId: destinationId, isThread: adminThread, threadName, createdBy: opts.actorId, createdByDisplayName: opts.actorDisplayName, createdAt: now, lastActivityAt: now });
   try {
     const dest = await opts.client.channels.fetch(destinationId);
     if (!dest || !dest.isTextBased() || !("send" in dest)) throw new Error("destination unavailable");
-    const banner = await dest.send({ content: shiftBanner(counter.shiftNumber) });
+    const banner = await dest.send({ content: shiftBanner(shiftNumber) });
     const url = `${opts.config.publicBaseUrl}/g/${opts.guildId}/i/${id}`;
-    const panel = await dest.send({ embeds: [buildPanelEmbed({ shiftNumber: counter.shiftNumber, url, startedBy: opts.actorDisplayName })], components: buildPanelComponents(id) });
+    const panel = await dest.send({ embeds: [buildPanelEmbed({ shiftNumber, url, startedBy: opts.actorDisplayName })], components: buildPanelComponents(id) });
     setInstanceMessages(opts.db, id, banner.id, panel.id);
     return { instance: { ...instance, bannerMessageId: banner.id, panelMessageId: panel.id }, url };
   } catch (error) { closeInstance(opts.db, id, opts.clock.now().toISOString()); throw error; }

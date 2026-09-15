@@ -19,7 +19,7 @@ export function buildSnapshot(instance: Instance, reports: Report[]): SnapshotRo
 export function occupancyFromReports(reports: Report[]): OccupancyMap {
   const result = Object.fromEntries(ROOMS.map((room) => [room, null])) as OccupancyMap;
   for (const report of reports) {
-    if (report.tickedAt === null) result[report.room] = report.kind;
+    if (report.type !== "banner" && report.tickedAt === null && report.room && report.kind) result[report.room] = report.kind;
   }
   return result;
 }

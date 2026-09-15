@@ -36,8 +36,12 @@ async function handleClose(interaction: ChatInputCommandInteraction, deps: { db:
   if (!instance) { await interaction.reply({ content: "No open session found.", ephemeral: true }); return; }
   if (instance.guildId !== interaction.guildId) { await interaction.reply({ content: "No open session found.", ephemeral: true }); return; }
   if (instance.closedAt) { await interaction.reply({ content: "Already closed.", ephemeral: true }); return; }
+  try {
+    await interaction.reply({ content: `Closed SHIFT ${instance.shiftNumber}.`, ephemeral: true });
+  } catch (error) {
+    console.error("Failed to reply to close interaction:", error);
+  }
   await finalizeClose({ db: deps.db, client: deps.client, events: deps.events, instance, clock: deps.clock });
-  await interaction.reply({ content: `Closed SHIFT ${instance.shiftNumber}.`, ephemeral: true });
 }
 
 export async function handleCloseAutocomplete(interaction: AutocompleteInteraction, db: Database.Database): Promise<void> { const focused = interaction.options.getFocused().toLowerCase(); await interaction.respond(listOpenInstances(db, interaction.guildId!).filter((i) => `${i.shiftNumber} ${i.threadName ?? "channel"} ${i.id}`.toLowerCase().includes(focused)).slice(0, 25).map((i) => ({ name: `SHIFT ${i.shiftNumber} · ${i.threadName ?? "channel"} · ${i.id}`.slice(0, 100), value: i.id }))); }

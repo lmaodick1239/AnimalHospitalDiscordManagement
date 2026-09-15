@@ -51,6 +51,12 @@ export function createDiscordPort(client: Client, db: Database.Database, log: { 
       const message = await channel.send({ content: reportBody(input.room, input.kind, input.displayName) });
       return { messageId: message.id };
     },
+    async sendBanner(input: { instance: Instance; shiftNumber: number }) {
+      const channel = await client.channels.fetch(input.instance.destinationChannelId);
+      if (!channel || !channel.isTextBased() || !("send" in channel)) throw new Error("destination channel unavailable");
+      const message = await channel.send({ content: `---- SHIFT ${input.shiftNumber} ----` });
+      return { messageId: message.id };
+    },
     async tickReport(input) {
       try {
         const message = await fetchMessage(client, input.instance.destinationChannelId, input.messageId);

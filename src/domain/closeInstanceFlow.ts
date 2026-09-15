@@ -33,11 +33,21 @@ export async function finalizeClose(opts: {
         components: [],
       });
     }
+    if (channel && "send" in channel) {
+      await channel.send({ content: "Game ended. Shift Closed." });
+    }
   } catch (error) { console.error(error); }
 
   if (opts.instance.isThread) {
     try {
       const thread = await opts.client.channels.fetch(opts.instance.destinationChannelId);
+      if (thread && "setName" in thread) {
+        const currentName = ("name" in thread && typeof thread.name === "string" && thread.name) ? thread.name : (opts.instance.threadName ?? "thread");
+        if (!currentName.endsWith("(closed)")) {
+          const newName = `${currentName.trim().slice(0, 91)} (closed)`;
+          await thread.setName(newName);
+        }
+      }
       if (thread && "setArchived" in thread) await thread.setArchived(true);
     } catch (error) { console.error(error); }
   }

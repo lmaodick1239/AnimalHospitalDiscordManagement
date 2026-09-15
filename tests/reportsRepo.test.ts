@@ -13,7 +13,7 @@ function fixture() {
   return db;
 }
 function report(id: string, room: "RM1" | "RM2", kind: "ANOMALY" | "MAYBE") {
-  return { id, instanceId: "i1", userId: "u1", displayName: "Ada", room, kind, discordMessageId: `m-${id}`, createdAt: at };
+  return { id, instanceId: "i1", userId: "u1", displayName: "Ada", room, kind, discordMessageId: `m-${id}`, createdAt: at, type: "report" as const };
 }
 
 test("stores reports, occupancy, and ticks", () => {
@@ -27,5 +27,13 @@ test("stores reports, occupancy, and ticks", () => {
   tickReport(db, "r1", "2026-01-01T01:00:00.000Z");
   assert.equal(getUncleared(db, "i1", "RM1"), undefined);
   assert.equal(listReports(db, "i1").length, 2);
+  db.close();
+});
+
+test("banner rows are listed but ignored by occupancy", () => {
+  const db = fixture();
+  insertReport(db, { id: "b1", instanceId: "i1", userId: "u1", displayName: "", room: null, kind: null, discordMessageId: "", createdAt: at, type: "banner" } as any);
+  assert.equal(listReports(db, "i1").length, 1);
+  assert.equal(occupancy(db, "i1").RM1, null);
   db.close();
 });

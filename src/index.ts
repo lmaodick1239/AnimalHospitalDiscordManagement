@@ -1,6 +1,10 @@
 import { Client, GatewayIntentBits } from "discord.js";
 import fs from "node:fs";
 import path from "node:path";
+import { loadEnv } from "./loadEnv.js";
+
+loadEnv();
+
 import { loadConfig } from "./config.js";
 import { openDb } from "./db.js";
 import { systemClock } from "./clock.js";
@@ -33,7 +37,7 @@ const idleCloser = startIdleCloser({ db, client, events, clock: systemClock });
 
 function shutdown(): void {
   idleCloser.stop();
-  server.close();
+  server.close(() => process.exit(0));
   void client.destroy();
   db.close();
 }

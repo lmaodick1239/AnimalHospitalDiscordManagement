@@ -6,16 +6,18 @@ export type Report = {
   instanceId: string;
   userId: string;
   displayName: string;
-  room: Room;
-  kind: Kind;
+  room: Room | null;
+  kind: Kind | null;
   discordMessageId: string;
   createdAt: string;
   tickedAt: string | null;
+  type: "report" | "banner";
 };
 
 type ReportRow = {
-  id: string; instance_id: string; user_id: string; display_name: string; room: Room;
-  kind: Kind; discord_message_id: string; created_at: string; ticked_at: string | null;
+  id: string; instance_id: string; user_id: string; display_name: string; room: Room | null;
+  kind: Kind | null; discord_message_id: string; created_at: string; ticked_at: string | null;
+  type: "report" | "banner";
 };
 
 function map(row: ReportRow): Report {
@@ -29,24 +31,25 @@ function map(row: ReportRow): Report {
     discordMessageId: row.discord_message_id,
     createdAt: row.created_at,
     tickedAt: row.ticked_at,
+    type: row.type ?? "report",
   };
 }
 
-export function insertReport(db: Database.Database, row: Omit<Report, "tickedAt">): Report {
+export function insertReport(db: Database.Database, row: Omit<Report, "tickedAt" | "type"> & { type?: Report["type"] }): Report {
   db.prepare(`
-    INSERT INTO reports (id, instance_id, user_id, display_name, room, kind, discord_message_id, created_at, ticked_at)
-    VALUES (@id, @instanceId, @userId, @displayName, @room, @kind, @discordMessageId, @createdAt, NULL)
-  `).run(row);
+    INSERT INTO reports (id, instance_id, user_id, display_name, room, kind, discord_message_id, created_at, ticked_at, type)
+    VALUES (@id, @instanceId, @userId, @displayName, @room, @kind, @discordMessageId, @createdAt, NULL, @type)
+  `).run({ ...row, type: row.type ?? "report" });
   return map(db.prepare("SELECT * FROM reports WHERE id = ?").get(row.id) as ReportRow);
 }
 
 export function getUncleared(db: Database.Database, instanceId: string, room: Room): Report | undefined {
-  const row = db.prepare("SELECT * FROM reports WHERE instance_id = ? AND room = ? AND ticked_at IS NULL").get(instanceId, room) as ReportRow | undefined;
+  const row = db.prepare("SELECT * FROM reports WHERE instance_id = ? AND room = ? AND ticked_at IS NULL AND type = 'report'").get(instanceId, room) as ReportRow | undefined;
   return row ? map(row) : undefined;
 }
 
 export function tickReport(db: Database.Database, id: string, atIso: string): void {
-  db.prepare("UPDATE reports SET ticked_at = ? WHERE id = ? AND ticked_at IS NULL").run(atIso, id);
+  db.prepare("UPDATE reports SET ticked_at = ? WHERE id = ? AND ticked_at IS NULL AND type = 'report'").run(atIso, id);
 }
 
 export function listReports(db: Database.Database, instanceId: string): Report[] {
@@ -55,7 +58,7 @@ export function listReports(db: Database.Database, instanceId: string): Report[]
 
 export function occupancy(db: Database.Database, instanceId: string): Record<Room, Kind | null> {
   const result = Object.fromEntries(ROOMS.map((room) => [room, null])) as Record<Room, Kind | null>;
-  const rows = db.prepare("SELECT room, kind FROM reports WHERE instance_id = ? AND ticked_at IS NULL").all(instanceId) as { room: Room; kind: Kind }[];
+  const rows = db.prepare("SELECT room, kind FROM reports WHERE instance_id = ? AND ticked_at IS NULL AND type = 'report'").all(instanceId) as { room: Room; kind: Kind }[];
   for (const row of rows) result[row.room] = row.kind;
   return result;
 }

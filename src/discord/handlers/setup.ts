@@ -6,7 +6,7 @@ import { upsertGuildSettings } from "../../stores/guildSettings.js";
 
 function memberPermissions(interaction: ChatInputCommandInteraction | AutocompleteInteraction): bigint {
   const permissions = interaction.member && "permissions" in interaction.member ? interaction.member.permissions : 0n;
-  return typeof permissions === "bigint" ? permissions : BigInt(permissions.toString());
+  return typeof permissions === "bigint" ? permissions : typeof permissions === "string" ? BigInt(permissions) : permissions.bitfield;
 }
 
 function validEmoji(value: string): boolean {

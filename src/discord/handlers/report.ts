@@ -1,17 +1,18 @@
 import { GuildMember, type ButtonInteraction, type ChatInputCommandInteraction, type Client } from "discord.js";
 import type Database from "better-sqlite3";
 import type { Clock } from "../../clock.js";
+import type { Config } from "../../config.js";
 import type { EventSink } from "../../stores/EventSink.js";
 import type { ModeStore } from "../../stores/ModeStore.js";
 import type { DiscordPort } from "../../domain/reportMachine.js";
 import { findOpenByDestination, getInstance } from "../../stores/instances.js";
 import { withRoomLock } from "../../stores/locks.js";
-import { applyReport, ClosedInstanceError, DiscordPostError, DiscordTickError } from "../../domain/reportMachine.js";
+import { advanceShift, applyReport, ClosedInstanceError, DiscordPostError, DiscordTickError } from "../../domain/reportMachine.js";
 import { isRoom, type Kind, type Room } from "../../domain/rooms.js";
 import { clearedAck, modeAck, postedAck } from "../../domain/strings.js";
-import { parsePanelCustomId } from "../panel.js";
+import { buildPanelComponents, buildPanelEmbed, parsePanelCustomId } from "../panel.js";
 
-export type ReportDeps = { db: Database.Database; client: Client; clock: Clock; events: EventSink; modes: ModeStore; discordPort: DiscordPort };
+export type ReportDeps = { db: Database.Database; client: Client; config: Config; clock: Clock; events: EventSink; modes: ModeStore; discordPort: DiscordPort };
 
 function displayName(interaction: ChatInputCommandInteraction | ButtonInteraction): string { return interaction.member instanceof GuildMember ? interaction.member.displayName : interaction.user.username; }
 async function runPress(opts: { instanceId: string; room: Room; kind: Kind; userId: string; displayName: string }, deps: ReportDeps) {
@@ -32,6 +33,23 @@ export async function handleButton(interaction: ButtonInteraction, deps: ReportD
   const parsed = parsePanelCustomId(interaction.customId); if (!parsed) { await interaction.reply({ content: "Invalid button.", ephemeral: true }); return; }
   const instance = getInstance(deps.db, parsed.instanceId); if (!instance || instance.closedAt) { await interaction.reply({ content: "Session closed.", ephemeral: true }); return; }
   if (parsed.kind === "mode") { await interaction.reply({ content: modeAck(deps.modes.toggle(interaction.user.id, instance.id)), ephemeral: true }); return; }
+  if (parsed.kind === "bump") {
+    try {
+      const result = await advanceShift({ db: deps.db, instance, userId: interaction.user.id, displayName: displayName(interaction), clock: deps.clock, events: deps.events, discord: deps.discordPort, newId: () => crypto.randomUUID() });
+      const url = `${deps.config.publicBaseUrl}/g/${instance.guildId}/i/${instance.id}`;
+      if (instance.panelMessageId) {
+        try {
+          const channel = await deps.client.channels.fetch(instance.destinationChannelId);
+          if (channel && "messages" in channel) {
+            const msg = await channel.messages.fetch(instance.panelMessageId);
+            await msg.edit({ embeds: [buildPanelEmbed({ shiftNumber: result.shiftNumber, url, startedBy: instance.createdByDisplayName })], components: buildPanelComponents(instance.id) });
+          }
+        } catch { /* non-fatal */ }
+      }
+      await interaction.reply({ content: `Shift advanced to SHIFT ${result.shiftNumber}.`, ephemeral: true });
+    } catch (error) { await interaction.reply({ content: errorMessage(error), ephemeral: true }); }
+    return;
+  }
   const kind = deps.modes.get(interaction.user.id, instance.id); await interaction.deferReply({ ephemeral: true });
   try { const result = await runPress({ instanceId: instance.id, room: parsed.room, kind, userId: interaction.user.id, displayName: displayName(interaction) }, deps); await interaction.editReply(result.type === "posted" ? postedAck(parsed.room, kind) : clearedAck(parsed.room)); } catch (error) { await interaction.editReply(errorMessage(error)); }
 }

@@ -7,7 +7,7 @@ import { getUncleared, listReports, occupancy } from "../src/stores/reports.ts";
 import { InProcessEventSink } from "../src/stores/InProcessEventSink.ts";
 import type { LogEvent } from "../src/stores/EventSink.ts";
 import { withRoomLock } from "../src/stores/locks.ts";
-import { applyReport, ClosedInstanceError, DiscordPostError, DiscordTickError, decideReport, type DiscordPort } from "../src/domain/reportMachine.ts";
+import { applyReport, advanceShift, ClosedInstanceError, DiscordPostError, DiscordTickError, decideReport, type DiscordPort } from "../src/domain/reportMachine.ts";
 import type { Instance } from "../src/stores/instances.ts";
 
 let nextId = 0;
@@ -27,6 +27,7 @@ function port(overrides: Partial<DiscordPort> = {}): DiscordPort {
   return {
     unarchive: async () => {},
     sendReport: async () => ({ messageId: "m1" }),
+    sendBanner: async () => ({ messageId: "b1" }),
     tickReport: async () => ({ ok: true }),
     ...overrides,
   };
@@ -80,4 +81,27 @@ test("overlapping calls serialize into one ticked report", async () => {
   const b = withRoomLock("i", "RM3", () => applyReport({ ...opts(db, instance, discord) }));
   await new Promise((r) => setTimeout(r, 5)); release(); await Promise.all([a, b]);
   assert.equal(listReports(db, "i").length, 1); assert.equal(listReports(db, "i")[0].tickedAt !== null, true);
+});
+
+test("advanceShift increments shift per instance independently", async () => {
+  const { db, instance } = seed();
+  const events: LogEvent[] = [];
+  const sink = new InProcessEventSink();
+  sink.subscribe("i", (e) => events.push(e));
+  const res = await advanceShift({
+    db,
+    instance,
+    userId: "u1",
+    displayName: "User",
+    clock: { now: () => new Date("2026-01-01T00:00:00.000Z") },
+    events: sink,
+    discord: port(),
+    newId: () => "banner1",
+  });
+  assert.equal(res.shiftNumber, 2);
+  assert.equal(events.length, 1);
+  assert.equal(events[0].type, "shift");
+  if (events[0].type === "shift") {
+    assert.equal(events[0].shiftNumber, 2);
+  }
 });

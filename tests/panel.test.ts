@@ -13,7 +13,7 @@ test("panel has mode and room rows with bound ids", () => {
   const rows = buildPanelComponents("instance");
   assert.equal(rows.length, 3);
   const serialized = rows.map((row) => row.toJSON().components as Array<{ label?: string; custom_id?: string }>);
-  assert.deepEqual(serialized.map((row) => row.map((button) => button.label)), [["Mode"], ["RM1", "RM2", "RM3", "RM4", "RM5"], ["RM6", "RM7", "RM8"]]);
+  assert.deepEqual(serialized.map((row) => row.map((button) => button.label)), [["Mode", "Next Shift"], ["RM1", "RM2", "RM3", "RM4", "RM5"], ["RM6", "RM7", "RM8"]]);
   assert.equal(serialized[1]![2]!.custom_id, "rm:instance:RM3");
 });
 
