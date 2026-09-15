@@ -102,6 +102,10 @@ export function listOpenIdleSince(db: Database.Database, cutoffIso: string): Ins
   return mapMany(db.prepare("SELECT * FROM instances WHERE closed_at IS NULL AND last_activity_at < ? ORDER BY last_activity_at ASC").all(cutoffIso) as InstanceRow[]);
 }
 
+export function listAllOpenInstances(db: Database.Database): Instance[] {
+  return mapMany(db.prepare("SELECT * FROM instances WHERE closed_at IS NULL ORDER BY created_at ASC").all() as InstanceRow[]);
+}
+
 export function closeAllOpenForGuild(db: Database.Database, guildId: string, atIso: string): number {
   return db.prepare("UPDATE instances SET closed_at = ? WHERE guild_id = ? AND closed_at IS NULL").run(atIso, guildId).changes;
 }
