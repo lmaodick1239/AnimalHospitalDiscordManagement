@@ -1,5 +1,7 @@
 import { randomBytes } from "node:crypto";
 
+export const CSRF_COOKIE = "aho_csrf";
+
 export function newCsrfToken(): string {
   return randomBytes(32).toString("hex");
 }
