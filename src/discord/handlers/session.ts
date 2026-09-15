@@ -8,7 +8,7 @@ import { createInstanceFlow, NotSetupError, ThrottleError, CapError, BotPermsErr
 import { getGuildSettings } from "../../stores/guildSettings.js";
 import { listOpenInstances, getInstance, findOpenByDestination, closeInstance } from "../../stores/instances.js";
 import { isShiftLead } from "../permissions.js";
-import { buildPanelEmbed } from "../panel.js";
+import { finalizeClose } from "../../domain/closeInstanceFlow.js";
 
 export async function handleSession(interaction: ChatInputCommandInteraction, deps: { db: Database.Database; client: Client; config: Config; clock: Clock; events: EventSink }): Promise<void> {
   const sub = interaction.options.getSubcommand();
@@ -36,8 +36,7 @@ async function handleClose(interaction: ChatInputCommandInteraction, deps: { db:
   if (!instance) { await interaction.reply({ content: "No open session found.", ephemeral: true }); return; }
   if (instance.guildId !== interaction.guildId) { await interaction.reply({ content: "No open session found.", ephemeral: true }); return; }
   if (instance.closedAt) { await interaction.reply({ content: "Already closed.", ephemeral: true }); return; }
-  const at = deps.clock.now().toISOString(); closeInstance(deps.db, instance.id, at); deps.events.emit({ type: "closed", instanceId: instance.id, closedAt: at });
-  try { const ch = await deps.client.channels.fetch(instance.destinationChannelId); if (ch && "messages" in ch && instance.panelMessageId) { const msg = await ch.messages.fetch(instance.panelMessageId); await msg.edit({ embeds: [buildPanelEmbed({ shiftNumber: instance.shiftNumber, url: `${deps.config.publicBaseUrl}/g/${instance.guildId}/i/${instance.id}`, startedBy: instance.createdByDisplayName, closed: true })], components: [] }); } } catch {}
+  await finalizeClose({ db: deps.db, client: deps.client, events: deps.events, instance, clock: deps.clock });
   await interaction.reply({ content: `Closed SHIFT ${instance.shiftNumber}.`, ephemeral: true });
 }
 
