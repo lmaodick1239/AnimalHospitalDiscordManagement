@@ -10,9 +10,9 @@ import { handleReportSlash, handleButton, type ReportDeps } from "./handlers/rep
 import { createDiscordPort } from "./postOrTick.js";
 import { handleGuildDelete } from "./handlers/guildDelete.js";
 
-export function createBot(opts: { config: Config; db: Database.Database; clock: Clock; events: EventSink; modes: ModeStore }): Client {
-  const client = new Client({ intents: [GatewayIntentBits.Guilds] });
-  const deps: ReportDeps = { db: opts.db, client, clock: opts.clock, events: opts.events, modes: opts.modes, discordPort: createDiscordPort(client, opts.db) };
+export function createBot(opts: { config: Config; db: Database.Database; clock: Clock; events: EventSink; modes: ModeStore; discordPort?: ReportDeps["discordPort"]; client?: Client }): Client {
+  const client = opts.client ?? new Client({ intents: [GatewayIntentBits.Guilds] });
+  const deps: ReportDeps = { db: opts.db, client, clock: opts.clock, events: opts.events, modes: opts.modes, discordPort: opts.discordPort ?? createDiscordPort(client, opts.db) };
   client.on("interactionCreate", async (interaction) => {
     try {
       if (interaction.isAutocomplete()) {
