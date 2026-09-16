@@ -46,6 +46,9 @@ jspm_packages/
 AnimalHospitalOrganizer*
 *.exe
 
+# FUSE / OS temporary files
+.fuse_hidden*
+
 # Snowpack dependency directory (https://snowpack.dev/)
 web_modules/
 

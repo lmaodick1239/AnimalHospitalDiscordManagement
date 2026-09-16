@@ -1,0 +1,48 @@
+name: Build & Release Executables
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            script: bash build.sh
+            artifact_name: AnimalHospitalOrganizer-linux-x64
+            artifact_path: AnimalHospitalOrganizer
+          - os: windows-latest
+            script: cmd /c build.bat
+            artifact_name: AnimalHospitalOrganizer-windows-x64
+            artifact_path: AnimalHospitalOrganizer.exe
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Run test suite
+        run: npm test
+
+      - name: Run packaging build
+        run: ${{ matrix.script }}
+
+      - name: Upload standalone executable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.artifact_path }}
+          if-no-files-found: error
