@@ -8,7 +8,7 @@
   },
   "scripts": {
     "start": "node --import tsx src/index.ts",
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && cp -r src/public dist/public",
     "test": "node --import tsx --test \"tests/**/*.test.ts\"",
     "package": "npm run build && caxa --input . --output AnimalHospitalOrganizer --exclude \"tests\" \"data\" \"*.md\" -- \"{{caxa}}/node_modules/.bin/node\" \"{{caxa}}/dist/index.js\"",
     "package:win": "npm run build && caxa --input . --output AnimalHospitalOrganizer.exe --exclude \"tests\" \"data\" \"*.md\" -- \"{{caxa}}/node_modules/.bin/node\" \"{{caxa}}/dist/index.js\""
