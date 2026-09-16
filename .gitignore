@@ -43,6 +43,8 @@ dist/
 .env
 *.sqlite*
 jspm_packages/
+AnimalHospitalOrganizer*
+*.exe
 
 # Snowpack dependency directory (https://snowpack.dev/)
 web_modules/

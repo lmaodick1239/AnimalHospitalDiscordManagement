@@ -3,24 +3,29 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "node --import tsx src/index.ts",
     "build": "tsc -p tsconfig.json",
-    "test": "node --import tsx --test tests/**/*.test.ts"
+    "test": "node --import tsx --test tests/**/*.test.ts",
+    "package": "npm run build && caxa --input . --output AnimalHospitalOrganizer --exclude \"tests\" \"data\" \"*.md\" -- \"{{caxa}}/node_modules/.bin/node\" \"{{caxa}}/dist/index.js\"",
+    "package:win": "npm run build && caxa --input . --output AnimalHospitalOrganizer.exe --exclude \"tests\" \"data\" \"*.md\" -- \"{{caxa}}/node_modules/.bin/node\" \"{{caxa}}/dist/index.js\""
   },
   "dependencies": {
     "better-sqlite3": "^11.6.0",
+    "cookie-signature": "^1.2.2",
     "discord.js": "^14.16.3",
     "express": "^4.21.2",
-    "ulid": "^2.3.0",
-    "cookie-signature": "^1.2.2"
+    "ulid": "^2.3.0"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",
     "@types/cookie-signature": "^1.1.2",
     "@types/express": "^5.0.0",
     "@types/node": "^22.10.2",
+    "caxa": "^3.0.1",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   }
